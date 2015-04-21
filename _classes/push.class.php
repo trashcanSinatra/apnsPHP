@@ -18,19 +18,25 @@ class push {
 
 	}
 	 	 
+	
+	
 	public function __destruct() {
 		 
 		 
 	}
 	 
+	
+	
 	public function __get($name) {
 		return $this->$name;
 	} 
 	
+	
+	
 	public function __set($name, $value) {
 		$this->$name=$value;
 	}
-	
+		
 	
 	
 	public function delegatePush($type, $msg)
@@ -38,7 +44,6 @@ class push {
 		
 	  $tokens;
 	  $messages;
-
 	  			
 	  if($type == "flush") {
 	  	
@@ -49,13 +54,7 @@ class push {
 	  	if($tokens != 0)   // check to make sure they're are tokens
 	  	{
 	  		if($messages != 0)  // make sure they're are messages in queue
-	  		{		  			
-	  			$this->xmlResponse = header('Content-Type: text/xml');
-	  			$this->xmlResponse .= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-	  			$this->xmlResponse .=  '<response>';
-	  			$this->xmlResponse .=  'All queued messages have been pushed.';
-	  			$this->xmlResponse .=  '</response>';
-
+	  		{		  				  				  			
 	  			$testArray = array();
 
 	  			// format each message, and stuff into temp array.
@@ -65,65 +64,44 @@ class push {
 	  				array_push($testArray, $pay);
 	  			}
 
-	  			// call the flush method, which sends all queued messages to 
-	  			// each registered with the app.
+	  			// call the flush method
 				$this->flushQueuedMessages($tokens, $testArray);
+								
+				$this->xmlResponse = $this->xml("Processing your request...");				
 				return $this->xmlResponse;
 	  				  				  							  					  						  				  						  					  				  				  	
 	  		 } else if($messages == 0) {  // No messages in queue
-
-	  		 	$this->xmlResponse = header('Content-Type: text/xml');
-	  		 	$this->xmlResponse .= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-	  		 	$this->xmlResponse .=  '<response>';
-	  		 	$this->xmlResponse .=  "There are no messages in the Queue.";
-	  		 	$this->xmlResponse .=  '</response>';
+	  		 	
+	  		 	$this->xmlResponse = $this->xml("There are no messages in the Queue.");
 	  		 	return $this->xmlResponse;
 	  		}  
 	  
 	    } else if($tokens == 0) {    // No devices to send to
 	     	
-	     	$this->xmlResponse = header('Content-Type: text/xml');
-	     	$this->xmlResponse .= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-	     	$this->xmlResponse .=  '<response>';
-	     	$this->xmlResponse .=  "There are no registered devices to send to";
-	     	$this->xmlResponse .=  '</response>';	
+			$this->xmlResponse = $this->xml("There are no registered devices to send to.");	
 	     	return $this->xmlResponse;
 	    }
-
+	    
 	  // If you just want to store a message for later.
 	  } elseif($type == "store") {
 	  	
 	  	$storeCheck = $this->apnsClass->storeMessage($type, $msg);
 	  	
 		  	if($storeCheck == 1) {
-		  		
-		  	$this->xmlResponse = header('Content-Type: text/xml');
-		  	$this->xmlResponse .= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-		  	$this->xmlResponse .=  '<response>';
-		  	$this->xmlResponse .=  "Your message has been stored, and is in the queue.";
-		  	$this->xmlResponse .=  '</response>';
-		  	return $this->xmlResponse;
+		  				  	
+			  	$this->xmlResponse = $this->xml("Your message is in the Queue.");
+			  	return $this->xmlResponse;
 		  	
 		  	} else if($storeCheck == 0) {
 
-	  		$this->xmlResponse = header('Content-Type: text/xml');
-	  		$this->xmlResponse .= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-	  		$this->xmlResponse .=  '<response>';
-	  		$this->xmlResponse .=  "This message could not be stored. Perhaps it already exists.";
-	  		$this->xmlResponse .=  '</response>';
-	  		return $this->xmlResponse;
-
+			  	$this->xmlResponse = $this->xml("Message could not be stored.  Perhaps it already exists.");
+		  		return $this->xmlResponse;
 	  	    	
 	  	    } else if ($storeCheck == 2) {
-	  	    	
-  	    	$this->xmlResponse = header('Content-Type: text/xml');
-  	    	$this->xmlResponse .= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-  	    	$this->xmlResponse .=  '<response>';
-  	    	$this->xmlResponse .=  "The database could not be connected to at this time. \n
-	  	    		  				Please try again later.";
-  	    	$this->xmlResponse .=  '</response>';
-  	    	return $this->xmlResponse;
-  	    	    	
+
+		  	    $this->xmlResponse = $this->xml("The database could not be connected to at this time. \n
+		  	    		  				Please try again later.");
+	  	    	return $this->xmlResponse;	    	    	
 	  	    }
 
 	  // Pushing a single message only. Which will be stored as sent.
@@ -135,49 +113,34 @@ class push {
 	  	{
 	  		
 	  		$payload['aps'] = array('alert' => $msg, 'badge' => 1, 'sound' => 'default');
-	  		$payload = json_encode($payload);
-	  			  		  	
-  	    	$this->xmlResponse = header('Content-Type: text/xml');
-  	    	$this->xmlResponse .= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-  	    	$this->xmlResponse .=  '<response>';
-			
+	  		$payload = json_encode($payload);	  			  		 
 			$tokens = $this->apnsClass->retrieveTokens();
 
 			if ($tokens > 0)
-			{
-				$this->xmlResponse .=  "Your message has been pushed.";
-				$this->xmlResponse .=  '</response>';
-				
+			{				
 				// If there are tokesn, then call pushMessage().
 				// This function handles the actual push after the XML has been returned.
 
 				$this->pushMessage($tokens, $payload);
+				
+				$this->xmlResponse = $this->xml("Your message had been pushed.");
 				return $this->xmlResponse;
 									
-			} else {				
-				$this->xmlResponse .= "There are no tokens in the database to send this message to.";
+			} else {		
+
+				$this->xmlResponse = $this->xml("There are no tokens in the database to send this message to.");
 				$this->xmlResponse .=  '</response>';
 				return $this->xmlResponse;
 			}
-
 				
 		} else if($storeCheck == 0) {
 
-	  		$this->xmlResponse = header('Content-Type: text/xml');
-	  		$this->xmlResponse .= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-	  		$this->xmlResponse .=  '<response>';
-	  		$this->xmlResponse .=  "This message could not be stored. Perhaps it already exists.";
-	  		$this->xmlResponse .=  '</response>';
-	  		return $this->xmlResponse;
-  	    	
+			$this->xmlResponse = $this->xml("Message could not be stored.  Perhaps it already exists.");
+			return $this->xmlResponse;
+			  	    	
   	    } else if ($storeCheck == 2) {
   	    	
-  	    	$this->xmlResponse = header('Content-Type: text/xml');
-  	    	$this->xmlResponse .= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-  	    	$this->xmlResponse .=  '<response>';
-  	    	$this->xmlResponse .=  "The database could not be connected to at this time. \n
-	  	    		  				Please try again later.";
-  	    	$this->xmlResponse .=  '</response>';
+  	    	$this->xmlResponse = $this->xml("The database could not be connected to at this time. \n Please try again later.");
   	    	return $this->xmlResponse;
   	    }	
 			
@@ -187,7 +150,7 @@ class push {
 	}  // End DelegatePush() Function
 	
 	
-	
+
 	private function pushMessage($tokenArray, $payload)
 	{
 		// Set variables based on Debug Mode
@@ -291,6 +254,19 @@ class push {
 			socket_close($apns);
 			fclose($apns);
 		}		
+	}
+	
+
+	
+	private function xml($message)
+	{
+		$xmlResponse = header('Content-Type: text/xml');
+		$xmlResponse .= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+		$xmlResponse .=  '<response>';
+		$xmlResponse .=  $message;
+		$xmlResponse .=  '</response>';	
+		
+		return $xmlResponse;
 	}
 	
 	
