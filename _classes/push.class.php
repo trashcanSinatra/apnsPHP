@@ -17,28 +17,21 @@ class push {
 		$this->apnsClass = $apns;
 
 	}
-	 	 
-	
-	
+
 	public function __destruct() {
 		 
 		 
 	}
-	 
-	
 	
 	public function __get($name) {
 		return $this->$name;
 	} 
 	
-	
-	
 	public function __set($name, $value) {
 		$this->$name=$value;
 	}
 		
-	
-	
+
 	public function delegatePush($type, $msg)
 	{	
 		
@@ -65,22 +58,25 @@ class push {
 	  			}
 
 	  			// call the flush method
-				$this->flushQueuedMessages($tokens, $testArray);
+				$this->prepareMessageList($tokens, $testArray, false);
 								
 				$this->xmlResponse = $this->xml("Processing your request...");				
-				return $this->xmlResponse;
+				echo $this->xmlResponse;
+				exit();
 	  				  				  							  					  						  				  						  					  				  				  	
 	  		 } else if($messages == 0) {  // No messages in queue
 	  		 	
 	  		 	$this->xmlResponse = $this->xml("There are no messages in the Queue.");
-	  		 	return $this->xmlResponse;
+	  		 	echo $this->xmlResponse;
+				exit();
 	  		}  
 	  
 	    } else if($tokens == 0) {    // No devices to send to
 	     	
 			$this->xmlResponse = $this->xml("There are no registered devices to send to.");	
-	     	return $this->xmlResponse;
-	    }
+  		 	echo $this->xmlResponse;
+			exit();
+	}
 	    
 	  // If you just want to store a message for later.
 	  } elseif($type == "store") {
@@ -90,18 +86,21 @@ class push {
 		  	if($storeCheck == 1) {
 		  				  	
 			  	$this->xmlResponse = $this->xml("Your message is in the Queue.");
-			  	return $this->xmlResponse;
+	  		 	echo $this->xmlResponse;
+				exit();
 		  	
 		  	} else if($storeCheck == 0) {
 
 			  	$this->xmlResponse = $this->xml("Message could not be stored.  Perhaps it already exists.");
-		  		return $this->xmlResponse;
+	  		 	echo $this->xmlResponse;
+				exit();
 	  	    	
 	  	    } else if ($storeCheck == 2) {
 
 		  	    $this->xmlResponse = $this->xml("The database could not be connected to at this time. \n
 		  	    		  				Please try again later.");
-	  	    	return $this->xmlResponse;	    	    	
+	  		 	echo $this->xmlResponse;
+				exit();	    	    	
 	  	    }
 
 	  // Pushing a single message only. Which will be stored as sent.
@@ -112,152 +111,139 @@ class push {
 	  	if($storeCheck == 1)
 	  	{
 	  		
-	  		$payload['aps'] = array('alert' => $msg, 'badge' => 1, 'sound' => 'default');
-	  		$payload = json_encode($payload);	  			  		 
+	  		$tempArray  = array();
+	  		$payload['aps'] = array('alert' => $msg, 'badge' => 1, 'sound' => 'default');	
+	  		array_push($tempArray, $payload);  			  		 
 			$tokens = $this->apnsClass->retrieveTokens();
 
 			if ($tokens > 0)
 			{				
-				// If there are tokesn, then call pushMessage().
+				// If there are tokens, then call pushMessage().
 				// This function handles the actual push after the XML has been returned.
 
-				$this->pushMessage($tokens, $payload);
+				$this->prepareMessageList($tokens, $tempArray, true);
 				
-				$this->xmlResponse = $this->xml("Your message had been pushed.");
-				return $this->xmlResponse;
+				$this->xmlResponse = $this->xml("Processing your request...");
+	  		 	echo $this->xmlResponse;
+				exit();
 									
 			} else {		
 
 				$this->xmlResponse = $this->xml("There are no tokens in the database to send this message to.");
 				$this->xmlResponse .=  '</response>';
-				return $this->xmlResponse;
+	  		 	echo $this->xmlResponse;
+				exit();
 			}
 				
 		} else if($storeCheck == 0) {
 
 			$this->xmlResponse = $this->xml("Message could not be stored.  Perhaps it already exists.");
-			return $this->xmlResponse;
+  		 	echo $this->xmlResponse;
+			exit();
 			  	    	
   	    } else if ($storeCheck == 2) {
   	    	
   	    	$this->xmlResponse = $this->xml("The database could not be connected to at this time. \n Please try again later.");
-  	    	return $this->xmlResponse;
-  	    }	
-			
-			
-  	    	
+  		 	echo $this->xmlResponse;
+			exit();
+  	    }	 	
 	  	} // End IF($type == StorePush)
 	}  // End DelegatePush() Function
 	
-	
-
-	private function pushMessage($tokenArray, $payload)
+	private function prepareMessageList($tokenArray, $payloadArray, $pushOnly)
 	{
-		// Set variables based on Debug Mode
-		if($this->debug){
-			
-		$file = fopen("_debug/samplePush.txt","w");
-	
+     
+     $path = ($this->debug) ? '_debug/samplePush.txt' : '_assets/tempload.txt';
+     $file = fopen($path, "w");
 		
-		} else if(!$this->debug) {
-			
-			$streamContext = stream_context_create();
-			stream_context_set_option($streamContext, 'ssl', 'local_cert', $this->apnsCert);
-			stream_context_set_option($streamContext, 'ssl', 'passphrase', $this->apnsPass);
-			$apns = stream_socket_client('ssl://' . $this->apnsHost . ':' .
-					 $this->apnsPort, $error, $errorString, 2, STREAM_CLIENT_CONNECT, $streamContext);
-		}
-		
-		
-		// Begin message push to APNS server.
-		foreach ($tokenArray as $token)
-		{
-			if($this->debug)
-			{			
-				fwrite($file, 0 . 0 . 32 . $token .
-				 0 . strlen($payload) . $payload . "\n");
-				
-			} else if(!$this->debug) {
-				
-				// begin push
-				
-				$apnsMessage = chr(0) . pack("n",32) .
-				pack('H*', str_replace(' ', '', $token)) .
-				pack("n", strlen($payload)) . $payload;
-				
-				fwrite($apns, $apnsMessage);				
-			
-			}
-		}
-		
-		// Close connection based on debug mode.
-		if($this->debug){
-			fclose($file);
-		} else if(!$this->debug) {
-			socket_close($apns);
-			fclose($apns);
-		}
-			
+				// Begin flush to APNS server.
+				foreach($tokenArray as $token)
+				{
+					foreach($payloadArray as $message)
+					{
+						$tempLoad = json_encode($message);
+						
+						if($this->debug) {
+							
+							 fwrite($file, 0 . 0 . 32 . $token . 0 .
+							 strlen($tempLoad) . $tempLoad . "\n");												
+						} else {					
+											
+							fwrite($file, chr(0) . pack("n",32) .
+							pack('H*', str_replace(' ', '', $token)) .
+							pack("n", strlen($tempLoad)) . $tempLoad . "\n");																				
+						}
+					}
+			  }	
+
+			 	if(!$this->debug && !$pushOnly)
+			 	{
+					$this->apnsClass->unQueue();
+			   }
+	           fclose($file);
 	}
+	
 
+public function finalPush()
+{
+	$handle = fopen("_assets/tempload.txt", "r");
+	$payload = array();
+	$SSLReturnTxt = "";
+	$errorText = '';
 	
-	
-	private function flushQueuedMessages($tokenArray, $payloadArray)
+	if(!$this->debug)
 	{
-		
-		// Set variables for live or debug mode.
-		if($this->debug){
-			
-		$file = fopen("_debug/samplePush.txt","w");
-		
-		} else if(!$this->debug) {
-			
-			$streamContext = stream_context_create();
-			stream_context_set_option($streamContext, 'ssl', 'local_cert', $this->apnsCert);
-			stream_context_set_option($streamContext, 'ssl', 'passphrase', $this->apnsPass);
-			$apns = stream_socket_client('ssl://' . $this->apnsHost . ':' .
-					 $this->apnsPort, $error, $errorString, 2, STREAM_CLIENT_CONNECT, $streamContext);
-		}
-		
-		// Begin flush to APNS server.
-		foreach($tokenArray as $token)
-		{
-			foreach($payloadArray as $message)
+		if ($handle) {
+				
+			while (($line = fgets($handle)) !== false)
 			{
-				$tempLoad = json_encode($message);
-		
-				if($this->debug) {
-					
-					// debug just writes plain test to _debug/samplePush.txt
-					fwrite($file, 0 . 0 . 32 . $token . 0 .
-					 strlen($tempLoad) . $tempLoad . "\n");							
-				} else {					
-					
-					// flushes all binary payloads to the APSN server in succession.
-					$apnsMessage = chr(0) . pack("n",32) .
-					pack('H*', str_replace(' ', '', $token)) .
-					pack("n", strlen($payload)) . $payload;
-					
-					fwrite($apns, $apnsMessage);
-										
-				}
+				array_push($payload, $line);
 			}
-		}	
+				
+			fclose($handle);
+			
+			try 
+			{
+				$SSLReturnTxt = "Your messages have been pushed to the APNS Server.";
+				$streamContext = stream_context_create();
+				stream_context_set_option($streamContext, 'ssl', 'local_cert', $this->apnsCert);
+				stream_context_set_option($streamContext, 'ssl', 'passphrase', $this->apnsPass);
+				$apns = stream_socket_client('ssl://' . $this->apnsHost . ':' . $this->apnsPort, $error, $errorString, 2, STREAM_CLIENT_CONNECT, $streamContext);
+				
+				if(!$apns)
+				{
+				   $errorText = $errorString;
+				}				
+				foreach($payload as $message)
+				{
+				  fwrite($apns, $message);
+				}					 					 
+				//  socket_close($apns);
+				  fclose($apns);
 
-		// Close connection based on debug mode.
-		if($this->debug){
-			fclose($file);
-		} else if(!$this->debug) {
-			// Unqueue the messages we just sent.
-			$this->apnsClass->unQueue();
-			// Close Connection Stream.
-			socket_close($apns);
-			fclose($apns);
-		}		
+			} catch (Exception $e) {
+				
+				$message = "Error contacting the server \n";
+				$message .= "PHP Error: " . $e . "\n";
+				$message .= "Apple Server Msg: " . $errorText;				
+				getDebug::writeMessage($message);
+				$SSLReturnTxt = "Problems contacting the server. Please consult the debug file.";
+								
+			} finally {				
+				echo $this->xml($SSLReturnTxt);
+				exit();				
+			}
+
+		} else {
+			echo $this->xml("The payload file could not be opened.");
+			exit();
+		}
+	} else {
+		echo $this->xml("Test Payload has been Stored.");
+		exit();
 	}
-	
+}
 
-	
 	private function xml($message)
 	{
 		$xmlResponse = header('Content-Type: text/xml');
