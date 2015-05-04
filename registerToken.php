@@ -1,18 +1,20 @@
 <?php
 
 include('_classes/dataLink.class.php');
-include('_classes/aspn.class.php');
+include('_classes/apns.class.php');
 
 
 $db = new dataLink();
-$tokenMgr = new aspn($db);
+$tokenMgr = new apns($db);
 $token = NULL;
 $xml = new SimpleXMLElement('<xml/>');
 
-if( isset( $_GET["id"])) {
+if( isset( $_GET["id"]) && $_GET["id"] != "") {
 	
 	    $token = $_GET["id"];
-	
+	    
+	    if(!$token || $token == "") { exit(); }
+	    
 		$storeToken = $tokenMgr->storeDeviceToken($token);
 		
 		if($storeToken) {
@@ -48,6 +50,8 @@ if( isset( $_GET["id"])) {
 	
 	exit;
 }
+
+
 
 
 
