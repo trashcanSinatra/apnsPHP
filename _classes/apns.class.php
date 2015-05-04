@@ -177,7 +177,7 @@ class apns
 		$query = "Update `messages` SET `status` = '$sent' WHERE `status` = '$queued' ";
 		$result = mysqli_query($this->db->connection, $query);
 		
-		if(!$result || mysqli_affected_rows($dbConnection->connection) == 0)
+		if(!$result || mysqli_affected_rows($this->db->connection) == 0)
 		{
 			return 0;
 			
@@ -188,7 +188,7 @@ class apns
 		}
 		
 		mysqli_free_result($result);
-		mysqli_close($db->connection);		
+		mysqli_close($this->db->connection);		
 		
 	}
 	
