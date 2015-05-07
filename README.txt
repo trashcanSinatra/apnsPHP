@@ -15,7 +15,7 @@ root folder inside a directory named "ios_push".
 
 
 Place your apple developer certificate in _assets/_certs/
-Set SSL password as the $apnsPass variable in push.class.php
+Set SSL password as the $apnsPass variable in apns.class.php
 
 
 Web Service # 1  Token Registration
