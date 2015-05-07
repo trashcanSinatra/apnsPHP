@@ -8,6 +8,10 @@ class apns
 	private $tokens;
 	private $msg;
 	private $messages;
+	private $apnsHost = 'gateway.sandbox.push.apple.com';   // take out sandBox to go live
+	private $apnsPort = 2195;
+	private $apnsCert = '_assets/_certs/apns-dev.pem';   // store apns-dev.pem file in this location
+	private $apnsPass = "";
 	
 	public function __construct($connection) 
 	{
@@ -190,6 +194,28 @@ class apns
 		mysqli_free_result($result);
 		mysqli_close($this->db->connection);		
 		
+	}
+
+	public function openStream() 
+	{
+				$streamContext = stream_context_create();
+				stream_context_set_option($streamContext, 'ssl', 'local_cert', $this->apnsCert);
+				stream_context_set_option($streamContext, 'ssl', 'passphrase', $this->apnsPass);
+				$apns = stream_socket_client('ssl://' . $this->apnsHost . ':' . $this->apnsPort, $error, $errorString, 2, STREAM_CLIENT_CONNECT, $streamContext);
+
+				if(!$apns && $error >= 0)
+				{
+					Throw new Exception("Trouble contacting the APNS servers.  Please consult the debug file.");
+				} else
+				{
+					return $apns;
+				}
+	}
+
+
+	public function closeStream($stream)
+	{
+		fclose($stream);
 	}
 	
 
