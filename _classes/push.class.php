@@ -2,10 +2,6 @@
 
 class push {
 	
-	private $apnsHost = 'gateway.sandbox.push.apple.com';   // take out sandBox to go live
-	private $apnsPort = 2195;
-	private $apnsCert = '_assets/_certs/apns-dev.pem';   // store apns-dev.pem file in this location
-	private $apnsPass = "";
 	private $apnsClass;
 	private $debug = false;
 	private $debugger;
@@ -204,30 +200,22 @@ public function finalPush()
 			
 			try 
 			{
-				$SSLReturnTxt = "Your messages have been pushed to the APNS Server.";
-				$streamContext = stream_context_create();
-				stream_context_set_option($streamContext, 'ssl', 'local_cert', $this->apnsCert);
-				stream_context_set_option($streamContext, 'ssl', 'passphrase', $this->apnsPass);
-				$apns = stream_socket_client('ssl://' . $this->apnsHost . ':' . $this->apnsPort, $error, $errorString, 2, STREAM_CLIENT_CONNECT, $streamContext);
-				
-				if(!$apns)
-				{
-				   $errorText = $errorString;
-				}				
+				$SSLReturnTxt = "Your messages have been pushed to the APNS Servers.";
+				$sslConnection = $this->apnsClass->openStream();
+
 				foreach($payload as $message)
 				{
-				  fwrite($apns, $message);
+				  fwrite($sslConnection, $message);
 				}					 					 
 				//  socket_close($apns);
-				  fclose($apns);
+				  $this->apnsClass->closeStream($sslConnection);
 
 			} catch (Exception $e) {
 				
 				$message = "Error contacting the server \n";
-				$message .= "PHP Error: " . $e . "\n";
-				$message .= "Apple Server Msg: " . $errorText;				
+				$message .= "PHP Error: " . $e . "\n";			
 				getDebug::writeMessage($message);
-				$SSLReturnTxt = "Problems contacting the server. Please consult the debug file.";
+				$SSLReturnTxt = "Trouble contacting the APNS servers.  Please consult the debug file.";
 								
 			} finally {				
 				echo $this->xml($SSLReturnTxt);
